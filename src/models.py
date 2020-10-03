@@ -246,6 +246,10 @@ class ManyToOneMarket(object):
         return matching
 
 
+    def check_blocking_pairs(self, matching):
+        pass
+
+
 class OneToOneMarket(ManyToOneMarket):
     """
     Basic class for the model of a one-to-one two-sided matching market.
@@ -579,6 +583,38 @@ class ManyToOneMarketWithRegionalQuotas(ManyToOneMarket):
                 matching[d] = h
 
         return matching
+
+
+    def check_blocking_pairs(self, matching):
+        pass
+
+
+    def check_weak_blocking_pairs(self, matching):
+        pass
+
+
+def generate_prefs(
+    num_doctors, 
+    num_hospitals, 
+    outside_option=False, 
+    random_seed=None
+    ):
+    """
+    Randomly generate preference lists of doctors and hospitals.
+
+    """
+    random_state = np.random.RandomState(seed=random_seed)
+
+    if outside_option:
+        len_d_pref = num_hospitals
+        len_h_pref = num_doctors
+    else:
+        len_d_pref = num_hospitals + 1
+        len_h_pref = num_doctors + 1
+
+    # some 
+
+    return d_prefs, h_prefs
 
 
 if __name__ == "__main__":
