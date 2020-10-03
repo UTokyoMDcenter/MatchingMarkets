@@ -1,4 +1,12 @@
+"""
+TODO : To try more complicated criteria of feasibility. Consider ages of students and impose constraints about the sum of ages on schools
+"""
+
 import numpy as np
+import heapq
+from itertools import permutations
+from util import InvalidPrefsError, InvalidCapsError
+
 
 class ManyToOneMarketWithConstraints(object):
     """
@@ -22,7 +30,8 @@ class ManyToOneMarketWithConstraints(object):
         The elements must be 0 <= x <= num_students.
         The number `num_students` is considered as an outside option.
 
-    school_consts
+    school_consts : 1d-array(function)
+        The list of functions that take a set of students and judge whether it is feasible for school.
     """
     def __init__(self, student_prefs, school_prefs, school_consts):
         self.num_students = len(student_prefs)
@@ -33,7 +42,7 @@ class ManyToOneMarketWithConstraints(object):
         self.school_outside_option = self.num_students
         self.school_consts = school_consts
         self._check_prefs()
-        #self._check_caps()
+        self._check_consts()
         self.school_rank_table = self._convert_prefs_to_ranks(self.school_prefs, self.num_students)
         self.student_rank_table = self._convert_prefs_to_ranks(self.student_prefs, self.num_schools)
 
@@ -65,6 +74,11 @@ class ManyToOneMarketWithConstraints(object):
                 "Elements of 'school_prefs' must be 0 <= x <= 'num_students'\n" +\
                 f"'school_prefs': {self.school_prefs}"
             raise InvalidPrefsError(msg)
+
+
+    def _check_consts(self):
+        assert len(self.school_consts) == self.num_schools, "Indicate constraints for all schools."
+        #assert all([all([students <= set(range(self.num_students)) for students in feasible_sets]) for feasible_sets in self.school_consts]), "Feasible sets should be a subset of the power set of the set of students."
 
 
     @staticmethod
@@ -114,7 +128,7 @@ class ManyToOneMarketWithConstraints(object):
         T = []
         for s in range(self.num_schools):
             D = self.demand_profile(s, p)
-            if D in self.school_consts[s]:
+            if self.school_consts[s](D):
                 T.append(p[s])
             else:
                 T.append(p[s] + 1)
@@ -144,23 +158,36 @@ class ManyToOneMarketWithConstraints(object):
 
         return matching_student
 
-"""
-num_students = len(student_prefs)
-num_schools = len(school_prefs)
-student_outside_option = num_schools
-school_outside_option = num_students
-school_rank_table = _convert_prefs_to_ranks(school_prefs, num_students)
-student_rank_table = _convert_prefs_to_ranks(student_prefs, num_schools)
-p = np.array([1, 1, 1])
-s = 0
-demanding_student_list = []
-for i in school_prefs[s][:num_students - p[s] + 1]:  # i is above or on the cutoff line of s
-    # i = 0
-    rank_s = student_rank_table[i][s]  # rank of s for i
-    if rank_s != student_outside_option:  # s is acceptable for i
-        if all([school_rank_table[s_prime][i] > num_students - p[s_prime] for s_prime in student_prefs[i][:rank_s]]):  # If s_prime is above s for i, i is below the cutoff line of s_prime
-            demanding_student_list.append(i)
-"""
+
+    def is_feasible(self, matching_student):
+        # matching_student = [0, 1, 0, 2]
+        for s in range(self.num_schools):
+            # s = 0
+            # It is easier if this function takes matching_school as its argument.
+            if not self.school_consts[s](set(np.where(np.array(matching_student) == s)[0])):
+                return False
+        return True
+
+
+    def is_indivisually_rational(self, matching_student):
+        for i in range(self.num_students):
+            # Assume that unacceptable schools are not in student_prefs[i].
+            if not matching_student[i] in self.student_prefs[i]:
+                return False
+        return True
+
+
+    def is_fair(self, matching_student):
+        for i, i_prime in permutations(range(self.num_students), 2):
+            for s in range(self.num_schools):
+                # The following has some computational redundancy.
+                cond_1 = self.student_rank_table[i][s] < self.student_rank_table[i][matching_student[i]]  # s is better for i than the school i matches.
+                cond_2 = matching_student[i_prime] == s  # i_prime matches s
+                cond_3 = self.school_rank_table[s][i] < self.school_rank_table[s][i_prime]  # i is better than i_prime for s
+                if all([cond_1, cond_2, cond_3]):
+                    return False
+        return True
+
 
 if __name__ == "__main__":
     student_prefs = [
@@ -175,9 +202,17 @@ if __name__ == "__main__":
         [2, 1, 3, 0],
     ]
     school_consts = [
-        [{0}, {1}, {2}, {3}, {0, 1}, {0, 2}, {1, 2}, {2, 3},],
-        [{0}, {1}, {2}, {3}, {0, 1}, {0, 2}, {0, 3}, {1, 2}, {1, 3}, {2, 3},],
-        [{0}, {1}, {2}, {3}, {0, 1}, {0, 2}, {0, 3}, {1, 2}, {1, 3}, {2, 3}, {0, 1, 2}, {0, 1, 3}],
+        lambda students: students in [{0}, {1}, {2}, {3}, {0, 1}, {0, 2}, {1, 2}, {2, 3},],
+        lambda students: students in [{0}, {1}, {2}, {3}, {0, 1}, {0, 2}, {0, 3}, {1, 2}, {1, 3}, {2, 3},],
+        lambda students: students in [{0}, {1}, {2}, {3}, {0, 1}, {0, 2}, {0, 3}, {1, 2}, {1, 3}, {2, 3}, {0, 1, 2}, {0, 1, 3}],
+    ]
+    school_consts = [
+        lambda students: students in [{0}, {1}, {2}, {3},],
+        lambda students: students in [{0}, {1}, {2}, {3}, {0, 1}, {0, 2}, {0, 3}, {1, 2}, {1, 3}, {2, 3},],
+        lambda students: students in [{0}, {1}, {2}, {3}, {0, 1}, {0, 2}, {0, 3}, {1, 2}, {1, 3}, {2, 3}, {0, 1, 2}, {0, 1, 3}],
     ]
     m = ManyToOneMarketWithConstraints(student_prefs, school_prefs, school_consts)
-    m.cutoff_adjustment_algorithm()
+    matching_student = m.cutoff_adjustment_algorithm()
+    m.is_feasible(matching_student)
+    m.is_indivisually_rational(matching_student)
+    m.is_fair(matching_student)
