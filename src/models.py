@@ -424,13 +424,12 @@ class ManyToOneMarketWithRegionalQuotas(ManyToOneMarket):
         original_caps = self.hospital_caps
         self.hospital_caps = target_caps
         matching = self.deferred_acceptance()
-        self.hospital_caps = target_caps
+        self.hospital_caps = original_caps
         return matching
 
 
     def flexible_deferred_acceptance(self, target_caps, hospital_order):
         """
-        Has some bugs.
         Run the flexible deferred acceptance algorithm proposed in 
         Kamada and Kojima (2010) in the market with regional quotas.
 
@@ -458,7 +457,7 @@ class ManyToOneMarketWithRegionalQuotas(ManyToOneMarket):
         hospital_rank_table = self._convert_prefs_to_ranks(
             self.hospital_prefs, self.num_doctors)
 
-        print(hospital_rank_table)
+        #print(hospital_rank_table)
 
         matching = np.full(
             self.num_doctors, self.doctor_outside_option, dtype=int)
@@ -470,10 +469,9 @@ class ManyToOneMarketWithRegionalQuotas(ManyToOneMarket):
 
         while len(doctors) > 0:
             d = doctors.pop()
-            first_rank = next_proposing_ranks[d]
             d_pref = self.doctor_prefs[d]
 
-            for rank in range(first_rank, len_d_pref):
+            for rank in range(next_proposing_ranks[d], len_d_pref):
                 next_proposing_ranks[d] += 1
                 h = d_pref[rank]
 
@@ -483,7 +481,7 @@ class ManyToOneMarketWithRegionalQuotas(ManyToOneMarket):
 
                 d_rank = hospital_rank_table[h, d]
                 h_region = self.hospital_regions[h]
-                print("d:", d, "h:", h,"d_rank:", d_rank, "h_region:", h_region)
+                #print("d:", d, "h:", h,"d_rank:", d_rank, "h_region:", h_region, "doctors:", doctors)
 
                 # if the doctor's rank is below the outside option
                 if d_rank == self.hospital_outside_option:
@@ -506,6 +504,7 @@ class ManyToOneMarketWithRegionalQuotas(ManyToOneMarket):
                         if d_rank > worst_rank:
                             worst_doctors_in_target_caps[h] = d
                         
+                        #print("matching:", matching)
                         break
 
                     # if the target cap is full but a less favorable doctor is matched  
@@ -529,8 +528,11 @@ class ManyToOneMarketWithRegionalQuotas(ManyToOneMarket):
 
                     else:
                         heapq.heappush(adjustment_matching[h], d_rank)
+
+                    #print("matching:", matching)
                         
                     # adjustment matching step
+                    #print("adj bf:", adjustment_matching)
                     hopitals_in_same_region = hospital_order[h_region]
                     hospitals = hopitals_in_same_region[:]
                     new_adjustment_matching = {hh: [] for hh in hopitals_in_same_region}
@@ -556,23 +558,24 @@ class ManyToOneMarketWithRegionalQuotas(ManyToOneMarket):
 
                         hospitals.append(hh)
 
-                    # substitute new heaps to the original dict
-                    for hh in hopitals_in_same_region:
-                        adjustment_matching[hh] = new_adjustment_matching[hh]
-
                     # an unmatched doctor moves to the original queue
                     for hh in hopitals_in_same_region:
                         if len(adjustment_matching[hh]) > 0:
                             dd_rank = heapq.heappop(adjustment_matching[hh])
                             doctors.append(self.hospital_prefs[hh, dd_rank])
 
-        print(matching)
-        print(adjustment_matching)
+                    # substitute new heaps to the original dict
+                    for hh in hopitals_in_same_region:
+                        adjustment_matching[hh] = new_adjustment_matching[hh]
+
+                    #print("adj af:", adjustment_matching)
+                    break
+
         # substitute the adjustment matching to the original
         for h in range(self.num_hospitals):
             for _ in range(len(adjustment_matching[h])):
                 d_rank = heapq.heappop(adjustment_matching[h])
-                d = self.hospital_prefs[h, dd_rank]
+                d = self.hospital_prefs[h, d_rank]
                 matching[d] = h
 
         return matching
@@ -624,6 +627,7 @@ if __name__ == "__main__":
     print(m.deferred_acceptance())
     """
 
+    """
     d_prefs = np.array([
         [2, 0, 4, 3, 5, 1], 
         [0, 2, 3, 1, 4, 5], 
@@ -657,3 +661,37 @@ if __name__ == "__main__":
     m = ManyToOneMarketWithRegionalQuotas(d_prefs, h_prefs, caps, regions, regional_caps)
     #print(m.JRMP_mechanism(target_caps))
     print(m.flexible_deferred_acceptance(target_caps, hospital_order))
+    """
+
+
+    # Kamada and Kojima (2010) Example 1 and 6
+    """
+    num_doctors = 10
+    num_hospitals = 2
+
+    d_prefs = np.array([
+        [0, 2, 1] for i in range(3) 
+    ] + [
+        [1, 2, 0] for i in range(num_doctors-3) 
+    ])
+
+    h_prefs = np.array([
+        [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10] 
+        for i in range(num_hospitals)
+    ])
+
+    print("d_prefs:", d_prefs)
+    print("h_prefs:", h_prefs)
+
+    caps = [10, 10]
+    regions = [0, 0]
+    regional_caps = [10]
+    target_caps = [5, 5]
+    hospital_order = {
+        0: [0, 1]
+    }
+    m = ManyToOneMarketWithRegionalQuotas(d_prefs, h_prefs, caps, regions, regional_caps)
+    print("JRMP mechanism result:", m.JRMP_mechanism(target_caps))
+    print("flexible DA result:", m.flexible_deferred_acceptance(target_caps, hospital_order))
+    """
+
