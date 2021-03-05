@@ -16,18 +16,18 @@ class ManyToOneMarket(object):
     ----------
     num_doctors : int
         The number of doctors.
-    
+
     num_hospitals : int
         The number of hospitals.
-    
+
     doctor_prefs : 2d-array(int)
         The list of doctors' preferences over the hospitals and the outside option.
-        The elements must be 0 <= x <= num_hospitals. 
+        The elements must be 0 <= x <= num_hospitals.
         The number `num_hospitals` is considered as an outside option.
 
     hospital_prefs : 2d-array(int)
         The list of hospital' preferences over the doctors and the outside option.
-        The elements must be 0 <= x <= num_doctors. 
+        The elements must be 0 <= x <= num_doctors.
         The number `num_doctors` is considered as an outside option.
 
     hospital_caps : 1d-array(int, optional)
@@ -53,7 +53,7 @@ class ManyToOneMarket(object):
         try:
             self.doctor_prefs = np.array(self.doctor_prefs, dtype=int)
             self.hospital_prefs = np.array(self.hospital_prefs, dtype=int)
-        
+
         except Exception as e:
             msg = "Each pref must be a matrix of integers.\n" +\
                 f"'doctor_prefs': {self.doctor_prefs}\n" +\
@@ -84,7 +84,7 @@ class ManyToOneMarket(object):
         else:
             try:
                 self.hospital_caps = np.array(self.hospital_caps, dtype=int)
-            
+
             except Exception as e:
                 msg = f"'hospital_caps' must be a list of non-negative integers.\n" +\
                     f"'hospital_caps': {self.hospital_caps}"
@@ -121,17 +121,17 @@ class ManyToOneMarket(object):
         """
         Run Boston algorithm in a many-to-one two-sided matching market.
 
-        By default, this method runs the doctor proposing algorithm 
+        By default, this method runs the doctor proposing algorithm
         and returns a stable matching in the market.
 
         Args:
             doctor_proposing : bool, optional
-                If True, it runs the doctor proposing alg. Otherwise it 
+                If True, it runs the doctor proposing alg. Otherwise it
                 runs the hospital proposing alg.
 
         Returns:
             matching : 1d-ndarray
-                List of the matched hospitals. The n-th element indicates 
+                List of the matched hospitals. The n-th element indicates
                 the hospital which the n-th doctor matches.
         """
         pass
@@ -139,26 +139,26 @@ class ManyToOneMarket(object):
 
     def deferred_acceptance(self, doctor_proposing=True):
         """
-        Run the deferred acceptance (Gale-Shapley) algorithm in 
+        Run the deferred acceptance (Gale-Shapley) algorithm in
         a many-to-one two-sided matching market.
 
-        By default, this method runs the doctor proposing DA 
+        By default, this method runs the doctor proposing DA
         and returns a stable matching in the market.
 
         Args:
             doctor_proposing : bool, optional
-                If True, it runs the doctor proposing DA. Otherwise it 
+                If True, it runs the doctor proposing DA. Otherwise it
                 runs the hospital proposing DA.
 
         Returns:
             matching : 1d-ndarray
-                List of the matched hospitals (and the outside option). 
-                The n-th element indicates the hospital which 
+                List of the matched hospitals (and the outside option).
+                The n-th element indicates the hospital which
                 the n-th doctor matches.
         """
         if not doctor_proposing:
             raise ValueError("Reverse DA hasn't been implemented yet.")
-        
+
         doctors = list(range(self.num_doctors-1, -1, -1))
         next_proposing_ranks = np.zeros(self.num_doctors, dtype=int)
         hospital_rank_table = self._convert_prefs_to_ranks(
@@ -202,7 +202,7 @@ class ManyToOneMarket(object):
                     # update worst rank
                     if d_rank > worst_rank:
                         worst_matched_doctors[h] = d
-                    
+
                     break
 
                 # if the cap is full but a less favorable doctor is matched
@@ -238,18 +238,18 @@ class OneToOneMarket(ManyToOneMarket):
     ----------
     num_doctors : int
         The number of doctors.
-    
+
     num_hospitals : int
         The number of hospitals.
-    
+
     doctor_prefs : 2d-array(int)
         The list of doctors' preferences over the hospitals and the outside option.
-        The elements must be 0 <= x <= num_hospitals. 
+        The elements must be 0 <= x <= num_hospitals.
         The number `num_hospitals` is considered as an outside option.
 
     hospital_prefs : 2d-array(int)
         The list of hospital' preferences over the doctors and the outside option.
-        The elements must be 0 <= x <= num_doctors. 
+        The elements must be 0 <= x <= num_doctors.
         The number `num_doctors` is considered as an outside option.
     """
     def __init__(self, doctor_prefs, hospital_prefs):
@@ -259,15 +259,15 @@ class OneToOneMarket(ManyToOneMarket):
 if __name__ == "__main__":
     """
     d_prefs = [
-        [0, 2, 1], 
-        [1, 0, 2], 
-        [0, 1, 2], 
-        [2, 0, 1], 
+        [0, 2, 1],
+        [1, 0, 2],
+        [0, 1, 2],
+        [2, 0, 1],
     ]
     h_prefs = [
-        [0, 2, 1, 3], 
-        [1, 0, 2, 3], 
-        [2, 0, 3, 1], 
+        [0, 2, 1, 3],
+        [1, 0, 2, 3],
+        [2, 0, 3, 1],
     ]
     caps = np.array([1, 1, 1])
     m = ManyToOneMarket(d_prefs, h_prefs, caps)
@@ -276,25 +276,25 @@ if __name__ == "__main__":
 
     """
     d_prefs = np.array([
-        [2, 0, 4, 3, 5, 1], 
-        [0, 2, 3, 1, 4, 5], 
-        [3, 4, 2, 0, 1, 5], 
-        [2, 3, 0, 4, 5, 1], 
-        [0, 3, 1, 5, 2, 4], 
-        [3, 2, 1, 0, 4, 5], 
-        [1, 4, 0, 2, 5, 3], 
-        [0, 2, 1, 4, 3, 5], 
-        [3, 0, 4, 5, 1, 2], 
-        [2, 0, 4, 1, 3, 5], 
-        [4, 3, 0, 2, 1, 5], 
+        [2, 0, 4, 3, 5, 1],
+        [0, 2, 3, 1, 4, 5],
+        [3, 4, 2, 0, 1, 5],
+        [2, 3, 0, 4, 5, 1],
+        [0, 3, 1, 5, 2, 4],
+        [3, 2, 1, 0, 4, 5],
+        [1, 4, 0, 2, 5, 3],
+        [0, 2, 1, 4, 3, 5],
+        [3, 0, 4, 5, 1, 2],
+        [2, 0, 4, 1, 3, 5],
+        [4, 3, 0, 2, 1, 5],
     ])
 
     h_prefs = np.array([
-        [2, 6, 8, 10, 4, 3, 9, 7, 5, 0, 1, 11], 
-        [4, 6, 9, 5, 7, 1, 2, 10, 11, 0, 3, 8], 
-        [10, 5, 7, 2, 1, 3, 6, 0, 9, 11, 4, 8], 
-        [9, 0, 1, 10, 3, 8, 4, 2, 5, 7, 11, 6], 
-        [1, 3, 9, 6, 5, 0, 7, 2, 10, 8, 11, 4], 
+        [2, 6, 8, 10, 4, 3, 9, 7, 5, 0, 1, 11],
+        [4, 6, 9, 5, 7, 1, 2, 10, 11, 0, 3, 8],
+        [10, 5, 7, 2, 1, 3, 6, 0, 9, 11, 4, 8],
+        [9, 0, 1, 10, 3, 8, 4, 2, 5, 7, 11, 6],
+        [1, 3, 9, 6, 5, 0, 7, 2, 10, 8, 11, 4],
     ])
 
     caps = [4, 1, 3, 2, 1]
@@ -304,25 +304,25 @@ if __name__ == "__main__":
 
     """
     d_prefs = np.array([
-        [2, 0, 4, 3, 5, 1], 
-        [0, 2, 3, 1, 4, 5], 
-        [3, 4, 2, 0, 1, 5], 
-        [2, 3, 0, 4, 5, 1], 
-        [0, 3, 1, 5, 2, 4], 
-        [3, 2, 1, 0, 4, 5], 
-        [1, 4, 0, 2, 5, 3], 
-        [0, 2, 1, 4, 3, 5], 
-        [3, 0, 4, 5, 1, 2], 
-        [2, 0, 4, 1, 3, 5], 
-        [4, 3, 0, 2, 1, 5], 
+        [2, 0, 4, 3, 5, 1],
+        [0, 2, 3, 1, 4, 5],
+        [3, 4, 2, 0, 1, 5],
+        [2, 3, 0, 4, 5, 1],
+        [0, 3, 1, 5, 2, 4],
+        [3, 2, 1, 0, 4, 5],
+        [1, 4, 0, 2, 5, 3],
+        [0, 2, 1, 4, 3, 5],
+        [3, 0, 4, 5, 1, 2],
+        [2, 0, 4, 1, 3, 5],
+        [4, 3, 0, 2, 1, 5],
     ])
 
     h_prefs = np.array([
-        [2, 6, 8, 10, 4, 3, 9, 7, 5, 0, 1, 11], 
-        [4, 6, 9, 5, 7, 1, 2, 10, 11, 0, 3, 8], 
-        [10, 5, 7, 2, 1, 3, 6, 0, 9, 11, 4, 8], 
-        [9, 0, 1, 10, 3, 8, 4, 2, 5, 7, 11, 6], 
-        [1, 3, 9, 6, 5, 0, 7, 2, 10, 8, 11, 4], 
+        [2, 6, 8, 10, 4, 3, 9, 7, 5, 0, 1, 11],
+        [4, 6, 9, 5, 7, 1, 2, 10, 11, 0, 3, 8],
+        [10, 5, 7, 2, 1, 3, 6, 0, 9, 11, 4, 8],
+        [9, 0, 1, 10, 3, 8, 4, 2, 5, 7, 11, 6],
+        [1, 3, 9, 6, 5, 0, 7, 2, 10, 8, 11, 4],
     ])
 
     caps = [4, 1, 3, 2, 1]
@@ -330,7 +330,7 @@ if __name__ == "__main__":
     regional_caps = [3, 2]
     target_caps = [1, 1, 1, 1, 1]
     hospital_order = {
-        0: [0, 3, 4], 
+        0: [0, 3, 4],
         1: [1, 2]
     }
     m = ManyToOneMarketWithRegionalQuotas(d_prefs, h_prefs, caps, regions, regional_caps)
@@ -345,13 +345,13 @@ if __name__ == "__main__":
     num_hospitals = 2
 
     d_prefs = np.array([
-        [0, 2, 1] for i in range(3) 
+        [0, 2, 1] for i in range(3)
     ] + [
-        [1, 2, 0] for i in range(num_doctors-3) 
+        [1, 2, 0] for i in range(num_doctors-3)
     ])
 
     h_prefs = np.array([
-        [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10] 
+        [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
         for i in range(num_hospitals)
     ])
 
@@ -369,4 +369,3 @@ if __name__ == "__main__":
     print("JRMP mechanism result:", m.JRMP_mechanism(target_caps))
     print("flexible DA result:", m.flexible_deferred_acceptance(target_caps, hospital_order))
     """
-
