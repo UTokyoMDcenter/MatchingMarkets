@@ -22,8 +22,8 @@ def generate_prefs(num_doctors, num_hospitals, outside_score_doctor=0, outside_s
     ARGS
         num_doctors (int) > 0
         num_hospitals (int) > 0
-        outside_score_doctor (bool) : relative "strength" of the outside option
-        outside_score_hospital (bool) : relative "strength" of the outside option
+        outside_score_doctor (0 <= float < 1) : relative "strength" of the outside option
+        outside_score_hospital (0 <= float < 1) : relative "strength" of the outside option
         random_type (str) : the probability distribtuion of the score
 
     RETURN
@@ -126,7 +126,7 @@ if __name__ == "__main__":
     h_pref_df.index = [f"部署{num+1}" for num in h_pref_df.index]
     h_pref_df.columns = [f"希望{num+1}" for num in h_pref_df.columns]
     h_pref_df = h_pref_df.applymap(lambda x: x if pd.isna(x) else f"{x+1}さん")
-    #h_pref_df.to_csv("h_pref.csv", encoding="shiftjis")
+    #.h_pref_df.to_csv("h_pref.csv", encoding="shiftjis")
 
 
     #pd.Series([elem[0] for elem in d_pref_dict.values()]).value_counts().plot(kind="bar")
