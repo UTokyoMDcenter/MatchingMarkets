@@ -11,44 +11,44 @@ from .two_sided import ManyToOneMarket
 
 class ManyToOneMarketWithRegionalQuotas(ManyToOneMarket):
     """
-    Class for the model of a many-to-one two-sided matching market 
+    Class for the model of a many-to-one two-sided matching market
     with regional quotas.
 
     Attributes
     ----------
     num_doctors : int
         The number of doctors.
-    
+
     num_hospitals : int
         The number of hospitals.
 
     num_regions : int
         The number of regions.
-    
+
     doctor_prefs : 2d-array(int)
         The list of doctors' preferences over the hospitals and the outside option.
-        The elements must be 0 <= x <= num_hospitals. 
+        The elements must be 0 <= x <= num_hospitals.
         The number `num_hospitals` is considered as an outside option.
 
     hospital_prefs : 2d-array(int)
         The list of hospital' preferences over the doctors and the outside option.
-        The elements must be 0 <= x <= num_doctors. 
+        The elements must be 0 <= x <= num_doctors.
         The number `num_doctors` is considered as an outside option.
 
     hospital_caps : 1d-array(int)
         The list of the capacities of the hospitals. The elements must be non-negative.
 
     hospital_regions : 1d-array(int)
-        The list of regions each hospital belongs to. 
+        The list of regions each hospital belongs to.
 
     regional_caps : 1d-array(int)
         The list of the capacities of each region. The elements must be non-negative.
     """
-    def __init__(self, 
-        doctor_prefs, 
-        hospital_prefs, 
-        hospital_caps, 
-        hospital_regions, 
+    def __init__(self,
+        doctor_prefs,
+        hospital_prefs,
+        hospital_caps,
+        hospital_regions,
         regional_caps
         ):
         super().__init__(doctor_prefs, hospital_prefs, hospital_caps)
@@ -65,7 +65,7 @@ class ManyToOneMarketWithRegionalQuotas(ManyToOneMarket):
         # hospital regions
         try:
             self.hospital_regions = np.array(self.hospital_regions, dtype=int)
-        
+
         except Exception as e:
             msg = f"'hospital_regions' must be a list of integers.\n" +\
                 f"'hospital_regions': {self.hospital_regions}"
@@ -79,7 +79,7 @@ class ManyToOneMarketWithRegionalQuotas(ManyToOneMarket):
         # regional caps
         try:
             self.regional_caps = np.array(self.regional_caps, dtype=int)
-        
+
         except Exception as e:
             msg = f"'regional_caps' must be a list of non-negative integers.\n" +\
                 f"'regional_caps': {self.regional_caps}"
@@ -102,7 +102,7 @@ class ManyToOneMarketWithRegionalQuotas(ManyToOneMarket):
         """
         try:
             target_caps = np.array(target_caps, dtype=int)
-        
+
         except Exception as e:
             msg = f"'target_caps' must be a list of non-negative integers.\n" +\
                 f"'target_caps': {target_caps}"
@@ -142,19 +142,19 @@ class ManyToOneMarketWithRegionalQuotas(ManyToOneMarket):
 
     def JRMP_mechanism(self, target_caps):
         """
-        Run the JRMP mechanism introduced in Kamada and Kojima (2010) 
+        Run the JRMP mechanism introduced in Kamada and Kojima (2010)
         in the market with regional quotas.
 
         Args:
             target_caps : 1d-array(int)
-                List of the target capacities of the hospitals. 
-                The sum of the target capacities of the hospitals in each 
+                List of the target capacities of the hospitals.
+                The sum of the target capacities of the hospitals in each
                 region must be less than or equal to its regional quota.
 
         Returns:
             matching : 1d-array(int)
-                List of the matched hospitals (and the outside option). 
-                The n-th element indicates the hospital which 
+                List of the matched hospitals (and the outside option).
+                The n-th element indicates the hospital which
                 the n-th doctor matches.
         """
         target_caps = self._check_target_caps(target_caps)
@@ -167,13 +167,13 @@ class ManyToOneMarketWithRegionalQuotas(ManyToOneMarket):
 
     def flexible_deferred_acceptance(self, target_caps, hospital_order):
         """
-        Run the flexible deferred acceptance algorithm proposed in 
+        Run the flexible deferred acceptance algorithm proposed in
         Kamada and Kojima (2010) in the market with regional quotas.
 
         Args:
             target_caps : 1d-array(int)
-                List of the target capacities of the hospitals. 
-                The sum of the target capacities of the hospitals in each 
+                List of the target capacities of the hospitals.
+                The sum of the target capacities of the hospitals in each
                 region must be less than or equal to its regional quota.
 
             hospital_order : dict
@@ -182,8 +182,8 @@ class ManyToOneMarketWithRegionalQuotas(ManyToOneMarket):
 
         Returns:
             matching : 1d-array(int)
-                List of the matched hospitals (and the outside option). 
-                The n-th element indicates the hospital which 
+                List of the matched hospitals (and the outside option).
+                The n-th element indicates the hospital which
                 the n-th doctor matches.
         """
         target_caps = self._check_target_caps(target_caps)
@@ -240,12 +240,12 @@ class ManyToOneMarketWithRegionalQuotas(ManyToOneMarket):
                         # update worst rank
                         if d_rank > worst_rank:
                             worst_doctors_in_target_caps[h] = d
-                        
+
                         #print("matching:", matching)
                         break
 
-                    # if the target cap is full but a less favorable doctor is matched  
-                    # in the target cap, then it accepts a new doctor and the worst 
+                    # if the target cap is full but a less favorable doctor is matched
+                    # in the target cap, then it accepts a new doctor and the worst
                     # doctor goes to the adjustment matching step
                     elif d_rank < worst_rank:
                         matching[d] = h
@@ -267,7 +267,7 @@ class ManyToOneMarketWithRegionalQuotas(ManyToOneMarket):
                         heapq.heappush(adjustment_matching[h], d_rank)
 
                     #print("matching:", matching)
-                        
+
                     # adjustment matching step
                     #print("adj bf:", adjustment_matching)
                     hopitals_in_same_region = hospital_order[h_region]
@@ -278,7 +278,7 @@ class ManyToOneMarketWithRegionalQuotas(ManyToOneMarket):
                     num_matches = 0
                     while len(hospitals) > 0:
                         hh = hospitals.pop(0)
-                        
+
                         if num_matches >= remaining_regional_cap:
                             break
 
@@ -329,25 +329,25 @@ class ManyToOneMarketWithRegionalQuotas(ManyToOneMarket):
 if __name__ == "__main__":
     """
     d_prefs = np.array([
-        [2, 0, 4, 3, 5, 1], 
-        [0, 2, 3, 1, 4, 5], 
-        [3, 4, 2, 0, 1, 5], 
-        [2, 3, 0, 4, 5, 1], 
-        [0, 3, 1, 5, 2, 4], 
-        [3, 2, 1, 0, 4, 5], 
-        [1, 4, 0, 2, 5, 3], 
-        [0, 2, 1, 4, 3, 5], 
-        [3, 0, 4, 5, 1, 2], 
-        [2, 0, 4, 1, 3, 5], 
-        [4, 3, 0, 2, 1, 5], 
+        [2, 0, 4, 3, 5, 1],
+        [0, 2, 3, 1, 4, 5],
+        [3, 4, 2, 0, 1, 5],
+        [2, 3, 0, 4, 5, 1],
+        [0, 3, 1, 5, 2, 4],
+        [3, 2, 1, 0, 4, 5],
+        [1, 4, 0, 2, 5, 3],
+        [0, 2, 1, 4, 3, 5],
+        [3, 0, 4, 5, 1, 2],
+        [2, 0, 4, 1, 3, 5],
+        [4, 3, 0, 2, 1, 5],
     ])
 
     h_prefs = np.array([
-        [2, 6, 8, 10, 4, 3, 9, 7, 5, 0, 1, 11], 
-        [4, 6, 9, 5, 7, 1, 2, 10, 11, 0, 3, 8], 
-        [10, 5, 7, 2, 1, 3, 6, 0, 9, 11, 4, 8], 
-        [9, 0, 1, 10, 3, 8, 4, 2, 5, 7, 11, 6], 
-        [1, 3, 9, 6, 5, 0, 7, 2, 10, 8, 11, 4], 
+        [2, 6, 8, 10, 4, 3, 9, 7, 5, 0, 1, 11],
+        [4, 6, 9, 5, 7, 1, 2, 10, 11, 0, 3, 8],
+        [10, 5, 7, 2, 1, 3, 6, 0, 9, 11, 4, 8],
+        [9, 0, 1, 10, 3, 8, 4, 2, 5, 7, 11, 6],
+        [1, 3, 9, 6, 5, 0, 7, 2, 10, 8, 11, 4],
     ])
 
     caps = [4, 1, 3, 2, 1]
@@ -355,7 +355,7 @@ if __name__ == "__main__":
     regional_caps = [3, 2]
     target_caps = [1, 1, 1, 1, 1]
     hospital_order = {
-        0: [0, 3, 4], 
+        0: [0, 3, 4],
         1: [1, 2]
     }
     m = ManyToOneMarketWithRegionalQuotas(d_prefs, h_prefs, caps, regions, regional_caps)
@@ -369,13 +369,13 @@ if __name__ == "__main__":
     num_hospitals = 2
 
     d_prefs = np.array([
-        [0, 2, 1] for i in range(3) 
+        [0, 2, 1] for i in range(3)
     ] + [
-        [1, 2, 0] for i in range(num_doctors-3) 
+        [1, 2, 0] for i in range(num_doctors-3)
     ])
 
     h_prefs = np.array([
-        [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10] 
+        [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
         for i in range(num_hospitals)
     ])
 
