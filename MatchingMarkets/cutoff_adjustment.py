@@ -5,7 +5,7 @@ TODO : To try more complicated criteria of feasibility. Consider ages of student
 import numpy as np
 import heapq
 from itertools import permutations
-from util import InvalidPrefsError, InvalidCapsError
+from MatchingMarkets.util import InvalidPrefsError, InvalidCapsError
 
 
 class ManyToOneMarketWithConstraints(object):
