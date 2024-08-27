@@ -561,5 +561,65 @@ def generate_caps_given_sum(len_list, target_sum, random_generator=None):
     return caps
 
 
+class MarketBase(object):
+    def __init__(self):
+        raise NotImplementedError("This class should be overridden.")
+
+
+    @staticmethod
+    def convert_prefs_to_ranks(prefs, num_objects):
+        num_people = len(prefs)
+        outside_option = num_objects
+        rank_table = np.full(
+            [num_people, num_objects+1], outside_option, dtype=int)
+
+        for p, pref in enumerate(prefs):
+            for rank, obj in enumerate(pref):
+                rank_table[p, obj] = rank
+                if obj == outside_option:
+                    break
+
+        return rank_table
+
+
+    @staticmethod
+    def get_matching_ranks(matching, rank_table):
+        matching_ranks = np.zeros_like(matching)
+        for d, h in enumerate(matching):
+            matching_ranks[d] = rank_table[d, h]
+
+        return matching_ranks
+
+
+    @staticmethod
+    def count_pref_length(prefs, outside_option):
+        pref_lengths = []
+
+        for d, li in enumerate(prefs):
+            for c, h in enumerate(li):
+                if h == outside_option:
+                    pref_lengths.append(c)
+                    break
+
+            else:
+                pref_lengths.append(len(li))
+
+        return pref_lengths
+
+
+    @staticmethod
+    def count_num_listed_agents(prefs, num_objects, outside_option):
+        num_agents = prefs.shape[0]
+        count = np.zeros(num_objects, dtype=int)
+        for i, pref in enumerate(prefs):
+            for j in pref:
+                if j == outside_option:
+                    break
+                
+                count[j] += 1
+
+        return count
+
+
 if __name__ == "__main__":
     pass

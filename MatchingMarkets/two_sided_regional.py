@@ -5,7 +5,8 @@ Two sided matching markets with regional quotas.
 import numpy as np
 import heapq
 import copy
-from MatchingMarkets.util import InvalidPrefsError, InvalidCapsError, MaxHeap, MinHeap, \
+from MatchingMarkets.util import InvalidPrefsError, InvalidCapsError, \
+    InvalidRegionError, MaxHeap, MinHeap, \
     generate_random_prefs, generate_caps_given_sum, round_caps_to_meet_sum
 from MatchingMarkets.two_sided import ManyToOneMarket
 
@@ -192,7 +193,7 @@ class ManyToOneMarketWithRegionalQuotas(ManyToOneMarket):
 
         doctors = list(range(self.num_doctors-1, -1, -1))
         next_proposing_ranks = np.zeros(self.num_doctors, dtype=int)
-        hospital_rank_table = self._convert_prefs_to_ranks(
+        hospital_rank_table = self.convert_prefs_to_ranks(
             self.hospital_prefs, self.num_doctors)
         
         # for in target caps matching process
@@ -338,28 +339,22 @@ class ManyToOneMarketWithRegionalQuotas(ManyToOneMarket):
         num_doctors, 
         num_hospitals, 
         num_regions, 
-        outside_option=False, 
-        random_seed=None
+        outside_score_doctor=0.0, 
+        outside_score_hospital=0.0, 
+        random_type="normal",
+        random_generator=None
         ):
-        random_generator = np.random.default_rng(seed=random_seed)
-        setup = {}
+        if random_generator is None:
+            random_generator = np.random.default_rng()
         
-        setup["d_prefs"] = generate_random_prefs(
+        setup = ManyToOneMarket.create_setup(
             num_doctors, 
             num_hospitals, 
-            outside_option,
+            outside_score_doctor, 
+            outside_score_hospital, 
+            random_type,
             random_generator
         )
-
-        setup["h_prefs"] = generate_random_prefs(
-            num_hospitals, 
-            num_doctors, 
-            outside_option,
-            random_generator
-        )
-        
-        setup["hospital_caps"] = generate_caps_given_sum(
-            num_hospitals, int(num_doctors*3/2), random_generator)
         
         setup["hospital_regions"] = random_generator.integers(
             0, num_regions, size=num_hospitals)
@@ -422,7 +417,7 @@ class ManyToOneMarketWithRegionalQuotas(ManyToOneMarket):
             target_caps = self._check_target_caps(target_caps)
 
         blocking_pairs = []
-        hospital_rank_table = self._convert_prefs_to_ranks(
+        hospital_rank_table = self.convert_prefs_to_ranks(
             self.hospital_prefs, self.num_doctors)
 
         # compute regional counts
