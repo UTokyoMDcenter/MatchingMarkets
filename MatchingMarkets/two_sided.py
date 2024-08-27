@@ -3,12 +3,12 @@ Basic two sided matching markets.
 
 """
 import numpy as np
-from MatchingMarkets.util import InvalidPrefsError, InvalidCapsError, MaxHeap, \
+from MatchingMarkets.util import MarketBase, InvalidPrefsError, InvalidCapsError, MaxHeap, \
     generate_prefs_from_random_scores, generate_caps_given_sum, round_caps_to_meet_sum
 from MatchingMarkets.matching_alg import deferred_acceptance
 
 
-class ManyToOneMarket(object):
+class ManyToOneMarket(MarketBase):
     """
     Basic class for the model of a many-to-one two-sided matching market.
 
@@ -34,7 +34,15 @@ class ManyToOneMarket(object):
         The list of the capacities of the hospitals. The elements must be non-negative.
         If nothing is specified, then all caps are set to be 1.
     """
-    def __init__(self, doctor_prefs, hospital_prefs, hospital_caps=None, no_validation=False):
+    def __init__(
+        self, 
+        doctor_prefs, 
+        hospital_prefs, 
+        hospital_caps=None, 
+        doctor_weak_order=None,
+        hospital_weak_order=None,
+        no_validation=False
+        ):
         self.num_doctors = len(doctor_prefs)
         self.num_hospitals = len(hospital_prefs)
         self.doctor_outside_option = self.num_hospitals
@@ -47,9 +55,26 @@ class ManyToOneMarket(object):
         else:
             self.hospital_caps = hospital_caps
 
+        if doctor_weak_order is None:
+            self.doctor_weak_order = np.tile(
+                [np.arange(self.num_hospitals+1)], 
+                (self.num_doctors, 1)
+            )
+        else:
+            self.doctor_weak_order = doctor_weak_order
+
+        if hospital_weak_order is None:
+            self.hospital_weak_order = np.tile(
+                [np.arange(self.num_doctors+1)], 
+                (self.num_hospitals, 1)
+            )
+        else:
+            self.hospital_weak_order = hospital_weak_order
+
         if not no_validation:
             self._convert_prefs()
             self._convert_caps()
+            self._convert_weak_orders()
 
 
     def _convert_prefs(self):
@@ -142,20 +167,11 @@ class ManyToOneMarket(object):
             raise InvalidCapsError(msg, "hospital_caps")
 
 
-    @staticmethod
-    def _convert_prefs_to_ranks(prefs, num_objects):
-        num_people = len(prefs)
-        outside_option = num_objects
-        rank_table = np.full(
-            [num_people, num_objects+1], outside_option, dtype=int)
-
-        for p, pref in enumerate(prefs):
-            for rank, obj in enumerate(pref):
-                rank_table[p, obj] = rank
-                if obj == outside_option:
-                    break
-
-        return rank_table
+    def _convert_weak_orders(self):
+        """
+        Validate doctor_weak_order and hospital_weak_order.
+        """
+        pass
 
 
     @staticmethod
@@ -165,9 +181,11 @@ class ManyToOneMarket(object):
         outside_score_doctor=0.0, 
         outside_score_hospital=0.0, 
         random_type="normal",
-        random_seed=None
+        random_generator=None
         ):
-        random_generator = np.random.default_rng(seed=random_seed)
+        if random_generator is None:
+            random_generator = np.random.default_rng()
+        
         setup = {}
 
         if outside_score_doctor in ["min", "max"]:
@@ -242,7 +260,7 @@ class ManyToOneMarket(object):
             raise NotImplementedError("Reverse boston is not implemented")
 
         doctors = list(range(self.num_doctors))
-        hospital_rank_table = self._convert_prefs_to_ranks(
+        hospital_rank_table = self.convert_prefs_to_ranks(
             self.hospital_prefs, self.num_doctors)
         remaining_caps = np.copy(self.hospital_caps)
         matching = np.full(
@@ -314,7 +332,7 @@ class ManyToOneMarket(object):
                 the hospital which the n-th doctor matches.
         """
         if not doctor_proposing:
-            raise NotImplementedError("Reverse boston is not implemented")
+            raise NotImplementedError("Reverse serial_dictatorship is not implemented")
 
         if application_order is None:
             if doctor_proposing:
@@ -322,8 +340,11 @@ class ManyToOneMarket(object):
             else:
                 application_order = list(range(self.num_hospitals))
 
-        hospital_rank_table = self._convert_prefs_to_ranks(
-            self.hospital_prefs, self.num_doctors)
+        hospital_rank_table = self.convert_prefs_to_ranks(
+            self.hospital_prefs, 
+            self.num_doctors
+        )
+
         remaining_caps = np.copy(self.hospital_caps)
         matching = np.full(
             self.num_doctors, 
@@ -332,9 +353,7 @@ class ManyToOneMarket(object):
         )
 
         for d in application_order:
-            for rank in range(self.num_hospitals+1):
-                h = self.doctor_prefs[d][rank]
-
+            for h in self.doctor_prefs[d]:
                 # if d's preference list is exhausted
                 if h == self.doctor_outside_option:
                     break
@@ -373,50 +392,100 @@ class ManyToOneMarket(object):
 
 
     def deferred_acceptance_raw_python(self, doctor_proposing=True):
-        doctors = list(range(self.num_doctors))
-        next_proposing_ranks = np.zeros(self.num_doctors, dtype=int)
-        hospital_rank_table = self._convert_prefs_to_ranks(
-            self.hospital_prefs, self.num_doctors)
-        matched_doctor_ranks = {
-            h: MaxHeap(self.hospital_caps[h]) for h in range(self.num_hospitals)
-        }
+        if doctor_proposing:
+            doctors = list(range(self.num_doctors))
+            next_proposing_ranks = np.zeros(self.num_doctors, dtype=int)
+            hospital_rank_table = self.convert_prefs_to_ranks(
+                self.hospital_prefs, 
+                self.num_doctors
+            )
+            matched_doctor_ranks = {
+                h: MaxHeap(self.hospital_caps[h]) for h in range(self.num_hospitals)
+            }
 
-        while len(doctors) > 0:
-            d = doctors.pop()
-            first_rank = next_proposing_ranks[d]
-            d_pref = self.doctor_prefs[d]
+            while len(doctors) > 0:
+                d = doctors.pop()
+                first_rank = next_proposing_ranks[d]
+                d_pref = self.doctor_prefs[d]
 
-            for rank in range(first_rank, self.num_hospitals+1):
-                next_proposing_ranks[d] += 1
-                h = d_pref[rank]
+                for rank in range(first_rank, self.num_hospitals+1):
+                    next_proposing_ranks[d] += 1
+                    h = d_pref[rank]
 
-                # if this doctor's preference list is exhausted
-                if h == self.doctor_outside_option:
-                    break
+                    # if this doctor's preference list is exhausted
+                    if h == self.doctor_outside_option:
+                        break
 
-                d_rank = hospital_rank_table[h, d]
+                    d_rank = hospital_rank_table[h, d]
 
-                # if the doctor's rank is below the outside option
-                if d_rank == self.hospital_outside_option:
-                    continue
+                    # if the rank of doctor d for hospital h is below the outside option
+                    if d_rank == self.hospital_outside_option:
+                        continue
 
-                # if the hospital cap is 0
-                if self.hospital_caps[h] == 0:
-                    pass
+                    # if the hospital cap is 0
+                    if self.hospital_caps[h] == 0:
+                        pass
 
-                # if the cap is not full
-                elif matched_doctor_ranks[h].length < self.hospital_caps[h]:
-                    matched_doctor_ranks[h].push(d_rank)
-                    break
+                    # if the cap is not full
+                    elif matched_doctor_ranks[h].length < self.hospital_caps[h]:
+                        matched_doctor_ranks[h].push(d_rank)
+                        break
 
-                # if the cap is full but a less favorable doctor is matched
-                elif d_rank < matched_doctor_ranks[h].root():
-                    worst_rank = matched_doctor_ranks[h].replace(d_rank)
-                    worst_doctor = self.hospital_prefs[h, worst_rank]
-                    doctors.append(worst_doctor)
-                    break
+                    # if the cap is full but a less favorable doctor is matched
+                    elif d_rank < matched_doctor_ranks[h].root():
+                        worst_rank = matched_doctor_ranks[h].replace(d_rank)
+                        worst_doctor = self.hospital_prefs[h, worst_rank]
+                        doctors.append(worst_doctor)
+                        break
 
-        matching = self._convert_matching_heap_to_list(matched_doctor_ranks)
+            matching = self._convert_matching_heap_to_list(matched_doctor_ranks)
+        
+        else:
+            matching = np.full(self.num_doctors, fill_value=self.doctor_outside_option)
+            remaining_caps = np.copy(self.hospital_caps)
+            next_proposing_ranks = np.zeros(self.num_hospitals, dtype=int)
+            doctor_rank_table = self.convert_prefs_to_ranks(
+                self.doctor_prefs, 
+                self.num_hospitals
+            )
+            
+            while np.any(remaining_caps > 0):
+                for h in range(self.num_hospitals):
+                    if remaining_caps[h] == 0:
+                        continue
+
+                    h_pref = self.hospital_prefs[h]
+                    first_rank = next_proposing_ranks[h]
+
+                    for rank in range(first_rank, self.num_doctors+1):
+                        next_proposing_ranks[h] += 1
+                        d = h_pref[rank]
+
+                        # if this hospital's preference list is exhausted
+                        if h == self.doctor_outside_option:
+                            remaining_caps[h] = 0
+                            break
+
+                        h_rank = doctor_rank_table[d, h]
+
+                        # if the rank of hospital h for doctor d is below the outside option
+                        if h_rank == self.doctor_outside_option:
+                            continue
+
+                        # if doctor d is matched with some hospital but the rank of hospital h 
+                        # for d is higher than that of the hospital currently matched
+                        elif h_rank < doctor_rank_table[d, matching[d]]:
+                            if matching[d] != self.doctor_outside_option:
+                                remaining_caps[matching[d]] += 1
+
+                            matching[d] = h
+                            remaining_caps[h] -= 1
+                            break
+                    
+                    else:
+                        # hospital h's preference list is exhausted
+                        remaining_caps[h] = 0
+
         return matching
 
 
@@ -439,10 +508,7 @@ class ManyToOneMarket(object):
                 The n-th element indicates the hospital which 
                 the n-th doctor matches.
         """
-        if not doctor_proposing:
-            raise NotImplementedError("Reverse DA is not implemented")
-
-        if no_numba:
+        if no_numba or (not doctor_proposing):
             return self.deferred_acceptance_raw_python(doctor_proposing)
 
         return deferred_acceptance(
@@ -450,14 +516,14 @@ class ManyToOneMarket(object):
             self.num_hospitals, 
             self.doctor_prefs, 
             self.hospital_prefs, 
-            self.hospital_caps
+            self.hospital_caps,
         )
 
 
     def list_blocking_pairs(self, matching):
-        doctor_rank_table = self._convert_prefs_to_ranks(
+        doctor_rank_table = self.convert_prefs_to_ranks(
             self.doctor_prefs, self.num_hospitals)
-        hospital_rank_table = self._convert_prefs_to_ranks(
+        hospital_rank_table = self.convert_prefs_to_ranks(
             self.hospital_prefs, self.num_doctors)
 
         # fill current matching rank table
@@ -505,7 +571,7 @@ class ManyToOneMarket(object):
 
     def get_doctor_matching_ranks(self, matching, doctor_rank_table=None):
         if doctor_rank_table is None:
-            doctor_rank_table = self._convert_prefs_to_ranks(
+            doctor_rank_table = self.convert_prefs_to_ranks(
                 self.doctor_prefs, self.num_hospitals)
         
         matching_ranks = np.zeros_like(matching)
@@ -517,7 +583,7 @@ class ManyToOneMarket(object):
 
     def get_hospital_matching_ranks(self, matching, hospital_rank_table=None):
         if hospital_rank_table is None:
-            hospital_rank_table = self._convert_prefs_to_ranks(
+            hospital_rank_table = self.convert_prefs_to_ranks(
                 self.hospital_prefs, self.num_doctors)
         
         matching_ranks = [[] for h in range(self.num_hospitals)]
@@ -526,22 +592,6 @@ class ManyToOneMarket(object):
                 matching_ranks[h].append(hospital_rank_table[h, d])
 
         return matching_ranks
-
-
-    @staticmethod
-    def count_pref_length(prefs, outside_option):
-        pref_lengths = []
-
-        for d, li in enumerate(prefs):
-            for c, h in enumerate(li):
-                if h == outside_option:
-                    pref_lengths.append(c)
-                    break
-
-            else:
-                pref_lengths.append(len(li))
-
-        return pref_lengths
 
 
     def analyze_matching(self, matching):
@@ -559,6 +609,18 @@ class ManyToOneMarket(object):
         result["hospital_pref_lengths"] = self.count_pref_length(
             self.hospital_prefs, 
             self.hospital_outside_option
+        )
+
+        result["num_listed_hospitals"] = self.count_num_listed_agents(
+            self.hospital_prefs, 
+            self.num_doctors, 
+            self.hospital_outside_option
+        )
+
+        result["num_listed_doctors"] = self.count_num_listed_agents(
+            self.doctor_prefs, 
+            self.num_hospitals, 
+            self.doctor_outside_option
         )
 
         result["unmatch_doctor_size"] = len(hospital_matching[self.doctor_outside_option])
@@ -620,9 +682,10 @@ if __name__ == "__main__":
     m = ManyToOneMarket(d_prefs, h_prefs, caps)
     r1 = m.deferred_acceptance()
     r2 = m.deferred_acceptance(no_numba=True)
+    r3 = m.deferred_acceptance(doctor_proposing=False)
     print(r1)
     print(r2)
-    
+    print(r3)
     """
 
     """
@@ -645,6 +708,7 @@ if __name__ == "__main__":
     caps = np.array([3, 1, 1, 1, 1])
     m = ManyToOneMarket(d_prefs, h_prefs, caps)
     print(m.deferred_acceptance())
+    print(m.deferred_acceptance(doctor_proposing=False))
     """
 
     """
@@ -673,9 +737,10 @@ if __name__ == "__main__":
     caps = [4, 1, 3, 2, 1]
     m = ManyToOneMarket(d_prefs, h_prefs, caps)
     print(m.deferred_acceptance())
+    print(m.deferred_acceptance(doctor_proposing=False))
     """
 
-    #"""
+    """
     num_doctors, num_hospitals = 3000, 300
     setup = ManyToOneMarket.create_setup(
         num_doctors, 
@@ -702,6 +767,9 @@ if __name__ == "__main__":
         m.analyze_matching(m.deferred_acceptance(no_numba=True))
     
     print(datetime.datetime.now() - start_time)
+    """
 
-    #"""
+    pass
+
+
     
