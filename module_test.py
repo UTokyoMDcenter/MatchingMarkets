@@ -4,7 +4,7 @@ For import test (temporary)
 """
 
 import numpy as np
-#import matching
+import MatchingMarkets
 
 
 if __name__ == "__main__":
@@ -20,7 +20,7 @@ if __name__ == "__main__":
         [2, 0, 3, 1], 
     ]
     caps = np.array([1, 1, 1])
-    m = matching.ManyToOneMarket(d_prefs, h_prefs, caps)
+    m = MatchingMarkets.ManyToOneMarket(d_prefs, h_prefs, caps)
     print("DA result:", m.deferred_acceptance())
 
 
@@ -48,7 +48,7 @@ if __name__ == "__main__":
     hospital_order = {
         0: [0, 1]
     }
-    m = matching.ManyToOneMarketWithRegionalQuotas(
+    m = MatchingMarkets.ManyToOneMarketWithRegionalQuotas(
         d_prefs, h_prefs, caps, regions, regional_caps)
     print("JRMP mechanism result:", m.JRMP_mechanism(target_caps))
     print("flexible DA result:", m.flexible_deferred_acceptance(target_caps, hospital_order))
